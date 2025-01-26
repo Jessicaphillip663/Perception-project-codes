@@ -1,0 +1,81 @@
+const canvas = document.getElementById("visual");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let currentTemp = 20; // Starting temperature
+let currentHumidity = 50; // Starting humidity
+let targetTemp = 20;
+let targetHumidity = 50;
+
+let port; // Declare port for serial communication
+
+// Adjust canvas size dynamically
+window.addEventListener("resize", () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+// Draw gradient
+function drawGradient(temp, humidity) {
+  const tempColor = `rgb(${mapValue(temp, 0, 40, 0, 255)}, 0, ${mapValue(temp, 0, 40, 255, 50)})`; // Blue to Red
+  const humidityColor = `rgb(${mapValue(humidity, 0, 100, 0, 255)}, ${mapValue(humidity, 0, 100, 100, 255)}, 0)`; // Yellow to Green
+
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, tempColor);
+  gradient.addColorStop(1, humidityColor);
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+// Map values to ranges
+function mapValue(value, inMin, inMax, outMin, outMax) {
+  return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
+}
+
+// Animation loop
+function animate() {
+  currentTemp += (targetTemp - currentTemp) * 0.05; // Smooth transition
+  currentHumidity += (targetHumidity - currentHumidity) * 0.05;
+
+  drawGradient(currentTemp, currentHumidity);
+  requestAnimationFrame(animate);
+}
+
+animate();
+
+// Connect to Arduino
+document.getElementById("connect-button").addEventListener("click", async () => {
+  if (port && port.readable) {
+    console.log("Port is already open.");
+    return;
+  }
+
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 9600 });
+
+    const textDecoder = new TextDecoderStream();
+    const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+    const reader = textDecoder.readable.getReader();
+
+    console.log("Connected to Arduino!");
+
+    // Read data from Arduino
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      const [newTemp, newHumidity] = value.trim().split(",");
+      targetTemp = parseFloat(newTemp) || targetTemp;
+      targetHumidity = parseFloat(newHumidity) || targetHumidity;
+
+      // Log the data in the console
+      console.log(`Temp: ${targetTemp}, Humidity: ${targetHumidity}`);
+    }
+  } catch (error) {
+    console.error("Error connecting to Arduino:", error);
+  }
+});
