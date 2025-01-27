@@ -1,0 +1,14 @@
+let currentTemp = 20; // Static temperature
+let currentHumidity = 50; // Static humidity
+
+function drawGradient(temp, humidity) {
+  const tempColor = `rgb(${mapValue(temp, 0, 40, 0, 255)}, 0, ${mapValue(temp, 0, 40, 255, 50)})`; // Blue to Red
+  const humidityColor = `rgb(0, ${mapValue(humidity, 0, 100, 100, 255)}, ${mapValue(humidity, 0, 100, 255, 150)})`; // Cyan to Green
+
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, tempColor);
+  gradient.addColorStop(1, humidityColor);
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
